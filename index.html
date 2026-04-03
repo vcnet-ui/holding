@@ -718,6 +718,9 @@
     var pageLoadTime = new Date();
     var actions = [];
     var storedIntention = '';
+    var writingStartTime = null;
+    var writingDuration = 0;
+    var maxScrollDepth = 0;
 
     function elapsed() {
       return Math.round((new Date() - pageLoadTime) / 1000) + 's';
@@ -727,11 +730,89 @@
       actions.push(action + ' (' + elapsed() + ')');
     }
 
+    // =============================================
+    // DEVICE & REFERRAL DETECTION
+    // =============================================
+    function getDevice() {
+      var ua = navigator.userAgent;
+      if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
+      if (/Android/i.test(ua)) return 'Android';
+      if (/Macintosh/i.test(ua)) return 'Mac';
+      if (/Windows/i.test(ua)) return 'Windows';
+      if (/Linux/i.test(ua)) return 'Linux';
+      return 'Unknown';
+    }
+
+    function getScreenSize() {
+      return window.innerWidth + 'x' + window.innerHeight;
+    }
+
+    function getReferrer() {
+      var ref = document.referrer;
+      if (!ref) return 'Direct';
+      if (ref.indexOf('instagram.com') > -1) return 'Instagram';
+      if (ref.indexOf('facebook.com') > -1) return 'Facebook';
+      if (ref.indexOf('twitter.com') > -1 || ref.indexOf('x.com') > -1) return 'X/Twitter';
+      if (ref.indexOf('linkedin.com') > -1) return 'LinkedIn';
+      if (ref.indexOf('substack.com') > -1) return 'Substack';
+      if (ref.indexOf('google.com') > -1) return 'Google';
+      if (ref.indexOf('youtube.com') > -1 || ref.indexOf('youtu.be') > -1) return 'YouTube';
+      if (ref.indexOf('voicecraft.io') > -1) return 'Voicecraft';
+      if (ref.indexOf('timadalin.xyz') > -1) return 'Tim Adalin site';
+      if (ref.indexOf('squarespace.com') > -1 || ref.indexOf('voicecraft') > -1) return 'Squarespace';
+      // Return the domain
+      try {
+        return new URL(ref).hostname;
+      } catch(e) {
+        return ref.substring(0, 50);
+      }
+    }
+
+    // =============================================
+    // RETURN VISIT DETECTION
+    // =============================================
+    var visitCount = 1;
+    var isReturn = false;
+    try {
+      var prev = localStorage.getItem('up_visits');
+      if (prev) {
+        visitCount = parseInt(prev) + 1;
+        isReturn = true;
+      }
+      localStorage.setItem('up_visits', visitCount.toString());
+    } catch(e) {
+      // localStorage not available (e.g. incognito)
+    }
+
+    // =============================================
+    // SCROLL DEPTH TRACKING (Phase 3)
+    // =============================================
+    window.addEventListener('scroll', function() {
+      var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      if (docHeight > 0) {
+        var pct = Math.round((scrollTop / docHeight) * 100);
+        if (pct > maxScrollDepth) {
+          maxScrollDepth = pct;
+        }
+      }
+    });
+
+    // =============================================
+    // SEND DATA
+    // =============================================
     function send(data) {
       data.sessionId = sessionId;
       data.event = CONFIG.eventName;
       data.actions = actions.join(' \u2192 ');
       data.timeOnPage = elapsed();
+      data.device = getDevice();
+      data.screenSize = getScreenSize();
+      data.referrer = getReferrer();
+      data.visitCount = visitCount;
+      data.isReturn = isReturn ? 'Yes' : 'No';
+      data.scrollDepth = maxScrollDepth + '%';
+      data.writingTime = writingDuration > 0 ? writingDuration + 's' : '';
       fetch(CONFIG.sheetsWebhook, {
         method: 'POST',
         mode: 'no-cors',
@@ -739,6 +820,15 @@
         body: JSON.stringify(data)
       }).catch(function() {});
     }
+
+    // =============================================
+    // PHASE 1 ABANDONMENT — send beacon on page load
+    // so we know someone visited even if they never click Enter
+    // =============================================
+    setTimeout(function() {
+      send({ landed: 'Yes' });
+      track('page loaded');
+    }, 500);
 
     // =============================================
     // PHASE TRANSITIONS
@@ -784,6 +874,11 @@
         phase2iframe.src = '';
       }
 
+      // Calculate writing duration
+      if (writingStartTime && text) {
+        writingDuration = Math.round((new Date() - writingStartTime) / 1000);
+      }
+
       if (skipped || !text) {
         document.getElementById('echoBlock').style.display = 'none';
         track('skipped reflection');
@@ -806,6 +901,11 @@
       var hint = document.getElementById('charHint');
       var btn = document.getElementById('continueBtn');
       var len = text.trim().length;
+
+      // Start writing timer on first keystroke
+      if (len === 1 && !writingStartTime) {
+        writingStartTime = new Date();
+      }
 
       if (len > 0) {
         hint.textContent = len + ' / 500';
