@@ -555,6 +555,45 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    .substack-btn {
+      display: inline-block;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid #c9a84c;
+      padding: 14px 40px;
+      text-decoration: none;
+      transition: all 0.5s ease;
+      position: relative;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+
+    .substack-btn::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 0%;
+      background: var(--accent);
+      transition: height 0.5s ease;
+      z-index: -1;
+    }
+
+    .substack-btn:hover {
+      border-color: #dfc06a;
+      color: var(--text-bright);
+    }
+
+    .substack-btn:hover::before {
+      height: 100%;
+    }
+
     /* --- Responsive --- */
     @media (max-width: 520px) {
       .container {
@@ -643,7 +682,12 @@
         <button class="join-btn" onclick="submitJoin()">Join the list</button>
         <p class="join-skip" onclick="skipJoin()">not now</p>
       </div>
-      <p class="video-label" style="margin-top: 48px;">Reflections on Voicecraft from Elder Les Spencer</p>
+      <p class="video-label" style="margin-top: 48px;">Latest from The Voicecraft Podcast:</p>
+      <div class="video-wrapper" onclick="loadVideo(this, 'RA6ro5Vi3OM')">
+        <img src="https://img.youtube.com/vi/RA6ro5Vi3OM/maxresdefault.jpg" alt="Video thumbnail">
+        <div class="video-play-btn"></div>
+      </div>
+      <p class="video-label">Reflections on Voicecraft from Elder Les Spencer</p>
       <div class="video-wrapper" onclick="loadVideo(this, 'IMVY2zcVuUo')">
         <img src="https://img.youtube.com/vi/IMVY2zcVuUo/maxresdefault.jpg" alt="Video thumbnail">
         <div class="video-play-btn"></div>
@@ -827,7 +871,8 @@
       track('skipped join');
       send({ intention: storedIntention });
       document.getElementById('joinBlock').innerHTML =
-        '<p class="join-thanks" style="color: var(--text-dim);">No worries. Explore the video below if you\u2019d like a taste of what we do.</p>';
+        '<p class="join-intro">No worries. Follow along on Substack if you\'d like to stay in the orbit.</p>' +
+        '<a class="substack-btn" href="https://substack.com/@timadalin" target="_blank">Read on Substack</a>';
     }
 
     // =============================================
