@@ -822,13 +822,12 @@
     }
 
     // =============================================
-    // PHASE 1 ABANDONMENT — send beacon on page load
-    // so we know someone visited even if they never click Enter
+    // PHASE 1 ABANDONMENT BEACON (3s delay to filter bots)
     // =============================================
     setTimeout(function() {
       send({ landed: 'Yes' });
       track('page loaded');
-    }, 500);
+    }, 3000);
 
     // =============================================
     // PHASE TRANSITIONS
